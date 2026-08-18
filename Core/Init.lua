@@ -12,21 +12,15 @@ function VRT:GetModule(name)
     return self.modules[name]
 end
 
--- Enregistre un événement sur `frame`, en différant l'appel à la fin du combat si le
--- joueur est actuellement en combat (RegisterEvent sur certains événements, comme
--- COMBAT_LOG_EVENT_UNFILTERED, déclenche ADDON_ACTION_FORBIDDEN quand appelé en combat,
--- ce qui arrive typiquement après un /reload pendant un pull).
+-- Enregistre un événement sur `frame` au tick suivant plutôt qu'immédiatement.
+-- RegisterEvent("COMBAT_LOG_EVENT_UNFILTERED") peut être refusé (ADDON_ACTION_FORBIDDEN)
+-- quand il est appelé depuis la pile d'exécution du chargement d'un fichier .lua ; le
+-- reporter via C_Timer.After(0, ...) l'exécute dans un contexte d'exécution neuf et non
+-- taint, ce qui règle le souci indépendamment de l'état de combat.
 function VRT:SafeRegisterEvent(frame, event)
-    if InCombatLockdown() then
-        local waiter = CreateFrame("Frame")
-        waiter:RegisterEvent("PLAYER_REGEN_ENABLED")
-        waiter:SetScript("OnEvent", function(self)
-            frame:RegisterEvent(event)
-            self:UnregisterEvent("PLAYER_REGEN_ENABLED")
-        end)
-    else
+    C_Timer.After(0, function()
         frame:RegisterEvent(event)
-    end
+    end)
 end
 
 VRT.defaultDB = {
