@@ -6,11 +6,20 @@ Format attendu pour chaque fichier de boss (rempli au fur et à mesure des kills
 VRT.Timelines["MidnightS2"]["Sszorak"] = {
     name = "Sszorak",
     journalEncounterID = nil,
+    notes = "Résumé général du combat.",
     phases = {
         { name = "Phase 1", events = {
             { time = 8,  spellID = nil, text = "Premier cast", duration = 4 },
             { time = 20, spellID = nil, text = "Mécanique X", duration = 0 },
         }},
+    },
+    cooldowns = {
+        -- Cooldowns de raid à prévoir/aligner sur ce boss (défensifs externes, immunités...)
+        { text = "CD raid externe conseillé avant le 1er Ravenous Feast" },
+    },
+    reminders = {
+        -- Rappels courts à afficher/relire juste avant le pull ou une phase clé
+        { text = "Vérifier les assignations de soak avant le pull" },
     },
 }
 ]]
@@ -49,30 +58,89 @@ function BossTimelines:GetElapsed()
     return GetTime() - encounterStart
 end
 
--- ===== Panneau intégré au shell d'options (onglet "Timelines") =====
+-- ===== Panneau intégré au shell d'options (onglet "Codex") =====
 local UI = VRT.UI
 
 local ROW_HEIGHT = 20
 local PHASE_HEADER_HEIGHT = 26
 local SECTION_GAP = 10
+local BLOCK_GAP = 16
 local DETAIL_WIDTH = 580
 
 local bossListContainer, detailContainer
 local selectedTier, selectedBoss
 local bossButtons = {}
 local tierLabels = {}
-local phaseHeaderPool = {}
-local eventRowPool = {}
 
--- Chaque ligne d'événement/phase est positionnée en absolu (offset Y calculé une seule
--- fois, pas ancrée au widget précédent) pour éviter tout effet d'escalier cumulatif.
-local function LayoutDetail(timeline)
+-- Pools de widgets séparés par bloc pour ne jamais réutiliser une ligne de mécanique
+-- comme ligne de cooldown/reminder (types de contenu différents, layout indépendant).
+local mechPhaseHeaderPool, mechRowPool = {}, {}
+local cooldownRowPool, reminderRowPool = {}, {}
+
+local function HideList(pool)
+    for _, widget in ipairs(pool) do widget:Hide() end
+end
+
+local function HideAllDetailRows()
+    HideList(mechPhaseHeaderPool)
+    HideList(mechRowPool)
+    HideList(cooldownRowPool)
+    HideList(reminderRowPool)
+end
+
+-- Ligne "puce + texte" générique, réutilisée pour Cooldowns et Reminders (simple liste
+-- plate, contrairement aux Mécaniques qui ont des en-têtes de phase).
+local function AcquireBulletRow(pool, index, parent, accentColor)
+    local row = pool[index]
+    if row then return row end
+
+    row = CreateFrame("Frame", nil, parent)
+    row:SetSize(DETAIL_WIDTH, ROW_HEIGHT)
+
+    local bullet = row:CreateTexture(nil, "ARTWORK")
+    bullet:SetSize(4, 4)
+    bullet:SetPoint("LEFT", row, "LEFT", 4, 0)
+    bullet:SetColorTexture(accentColor[1], accentColor[2], accentColor[3], 0.9)
+    row.bullet = bullet
+
+    local text = row:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    text:SetPoint("LEFT", row, "LEFT", 16, 0)
+    text:SetPoint("RIGHT", row, "RIGHT", 0, 0)
+    text:SetJustifyH("LEFT")
+    text:SetWordWrap(true)
+    row.text = text
+
+    pool[index] = row
+    return row
+end
+
+-- Empile une liste plate d'entrées {text=...} sous `anchorFrame`, chacune dans son propre
+-- pool. Retourne la hauteur totale utilisée (0 si la liste est vide).
+local function LayoutBulletList(entries, pool, parent, anchorFrame, accentColor)
+    local y = 0
+    for i, entry in ipairs(entries or {}) do
+        local row = AcquireBulletRow(pool, i, parent, accentColor)
+        row:ClearAllPoints()
+        row:SetPoint("TOPLEFT", anchorFrame, "TOPLEFT", 0, -y)
+        row.text:SetText(entry.text or "")
+        row:Show()
+
+        local lineHeight = row.text:GetStringHeight()
+        local rowHeight = math.max(ROW_HEIGHT, lineHeight + 6)
+        row:SetHeight(rowHeight)
+        y = y + rowHeight + 2
+    end
+    return y
+end
+
+-- Bloc "Mécaniques" : phases + événements, avec en-tête de phase teinté.
+local function LayoutMechanics(timeline, anchorFrame)
     local y = 0
     local phaseCount, rowCount = 0, 0
 
     for _, phase in ipairs(timeline.phases or {}) do
         phaseCount = phaseCount + 1
-        local header = phaseHeaderPool[phaseCount]
+        local header = mechPhaseHeaderPool[phaseCount]
         if not header then
             header = CreateFrame("Frame", nil, detailContainer)
             header:SetSize(DETAIL_WIDTH, PHASE_HEADER_HEIGHT)
@@ -87,42 +155,22 @@ local function LayoutDetail(timeline)
             text:SetTextColor(VRT.ACCENT[1], VRT.ACCENT[2], VRT.ACCENT[3])
             header.text = text
 
-            phaseHeaderPool[phaseCount] = header
+            mechPhaseHeaderPool[phaseCount] = header
         end
         header:ClearAllPoints()
-        header:SetPoint("TOPLEFT", detailContainer.eventsAnchor, "TOPLEFT", 0, -y)
+        header:SetPoint("TOPLEFT", anchorFrame, "TOPLEFT", 0, -y)
         header.text:SetText(phase.name or ("Phase " .. phaseCount))
         header:Show()
         y = y + PHASE_HEADER_HEIGHT + 4
 
         for _, event in ipairs(phase.events or {}) do
             rowCount = rowCount + 1
-            local row = eventRowPool[rowCount]
-            if not row then
-                row = CreateFrame("Frame", nil, detailContainer)
-                row:SetSize(DETAIL_WIDTH, ROW_HEIGHT)
-
-                local bullet = row:CreateTexture(nil, "ARTWORK")
-                bullet:SetSize(4, 4)
-                bullet:SetPoint("LEFT", row, "LEFT", 4, 0)
-                bullet:SetColorTexture(VRT.ACCENT[1], VRT.ACCENT[2], VRT.ACCENT[3], 0.9)
-                row.bullet = bullet
-
-                local text = row:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-                text:SetPoint("LEFT", row, "LEFT", 16, 0)
-                text:SetPoint("RIGHT", row, "RIGHT", 0, 0)
-                text:SetJustifyH("LEFT")
-                text:SetWordWrap(true)
-                row.text = text
-
-                eventRowPool[rowCount] = row
-            end
+            local row = AcquireBulletRow(mechRowPool, rowCount, detailContainer, VRT.ACCENT)
             row:ClearAllPoints()
-            row:SetPoint("TOPLEFT", detailContainer.eventsAnchor, "TOPLEFT", 0, -y)
+            row:SetPoint("TOPLEFT", anchorFrame, "TOPLEFT", 0, -y)
             row.text:SetText(event.text or "")
             row:Show()
 
-            -- Hauteur de ligne dynamique si le texte tient sur plusieurs lignes
             local lineHeight = row.text:GetStringHeight()
             local rowHeight = math.max(ROW_HEIGHT, lineHeight + 6)
             row:SetHeight(rowHeight)
@@ -135,20 +183,18 @@ local function LayoutDetail(timeline)
     return y
 end
 
-local function HideDetailRows()
-    for _, header in ipairs(phaseHeaderPool) do header:Hide() end
-    for _, row in ipairs(eventRowPool) do row:Hide() end
-end
-
 local function ShowTimelineDetail(tier, boss)
     selectedTier, selectedBoss = tier, boss
     local timeline = BossTimelines:GetTimeline(tier, boss)
-    HideDetailRows()
+    HideAllDetailRows()
 
     if not timeline then
         detailContainer.emptyText:Show()
         detailContainer.titleText:SetText("")
         detailContainer.notesText:SetText("")
+        detailContainer.mechPanel:Hide()
+        detailContainer.cooldownPanel:Hide()
+        detailContainer.reminderPanel:Hide()
         return
     end
 
@@ -157,10 +203,43 @@ local function ShowTimelineDetail(tier, boss)
     detailContainer.notesText:SetText(timeline.notes or "")
 
     local notesHeight = detailContainer.notesText:GetStringHeight()
-    detailContainer.eventsAnchor:ClearAllPoints()
-    detailContainer.eventsAnchor:SetPoint("TOPLEFT", detailContainer.notesText, "BOTTOMLEFT", 0, -math.max(notesHeight, 16) - 14)
+    local y = math.max(notesHeight, 16) + 18
 
-    LayoutDetail(timeline)
+    -- Bloc Mécaniques
+    local mechPanel = detailContainer.mechPanel
+    mechPanel:ClearAllPoints()
+    mechPanel:SetPoint("TOPLEFT", detailContainer, "TOPLEFT", 0, -y)
+    local mechHeight = LayoutMechanics(timeline, mechPanel.contentTop)
+    mechPanel:SetHeight(24 + mechHeight + 10)
+    mechPanel:Show()
+    y = y + mechPanel:GetHeight() + BLOCK_GAP
+
+    -- Bloc Cooldowns
+    local cooldownPanel = detailContainer.cooldownPanel
+    cooldownPanel:ClearAllPoints()
+    cooldownPanel:SetPoint("TOPLEFT", detailContainer, "TOPLEFT", 0, -y)
+    local cooldownEntries = timeline.cooldowns or {}
+    local cooldownHeight = LayoutBulletList(cooldownEntries, cooldownRowPool, detailContainer, cooldownPanel.contentTop, {0.42, 0.69, 0.95})
+    if #cooldownEntries > 0 then
+        cooldownPanel:SetHeight(24 + cooldownHeight + 10)
+        cooldownPanel:Show()
+        y = y + cooldownPanel:GetHeight() + BLOCK_GAP
+    else
+        cooldownPanel:Hide()
+    end
+
+    -- Bloc Reminders
+    local reminderPanel = detailContainer.reminderPanel
+    reminderPanel:ClearAllPoints()
+    reminderPanel:SetPoint("TOPLEFT", detailContainer, "TOPLEFT", 0, -y)
+    local reminderEntries = timeline.reminders or {}
+    local reminderHeight = LayoutBulletList(reminderEntries, reminderRowPool, detailContainer, reminderPanel.contentTop, {0.92, 0.35, 0.14})
+    if #reminderEntries > 0 then
+        reminderPanel:SetHeight(24 + reminderHeight + 10)
+        reminderPanel:Show()
+    else
+        reminderPanel:Hide()
+    end
 end
 
 local function RefreshBossList()
@@ -231,15 +310,17 @@ function BossTimelines:BuildOptionsPanel(container)
     detailContainer.notesText:SetJustifyH("LEFT")
     detailContainer.notesText:SetWordWrap(true)
 
-    -- Point d'ancrage neutre : sa position Y est recalculée à chaque sélection de boss
-    -- selon la hauteur réelle des notes (variable), puis LayoutDetail s'ancre à lui.
-    detailContainer.eventsAnchor = CreateFrame("Frame", nil, detailContainer)
-    detailContainer.eventsAnchor:SetSize(1, 1)
+    detailContainer.mechPanel = UI.CreateSectionPanel(detailContainer, "Mécaniques", DETAIL_WIDTH)
+    detailContainer.cooldownPanel = UI.CreateSectionPanel(detailContainer, "Cooldowns à prévoir", DETAIL_WIDTH)
+    detailContainer.reminderPanel = UI.CreateSectionPanel(detailContainer, "Reminders", DETAIL_WIDTH)
+    detailContainer.mechPanel:Hide()
+    detailContainer.cooldownPanel:Hide()
+    detailContainer.reminderPanel:Hide()
 
     RefreshBossList()
     -- Hauteur généreuse fixe : le plus long boss (Coiled Altar, 4 phases ~25 events)
     -- tient dans cet espace ; le scroll du panneau principal gère le débordement éventuel.
-    container.contentHeight = 700
+    container.contentHeight = 900
 end
 
 function BossTimelines:RefreshOptionsPanel()

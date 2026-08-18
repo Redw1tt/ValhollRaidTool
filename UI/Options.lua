@@ -12,26 +12,34 @@ local optionsFrame
 local tabButtons = {}
 local activeTabKey
 
--- Chaque entrée : { key, label, moduleName (optionnel, pour le toggle enabled) }
+-- Chaque entrée : { key, label, moduleName (optionnel, pour le toggle enabled), group }
+-- "group" sert uniquement à regrouper visuellement la sidebar (voir CreateSidebarButton) ;
+-- il n'a aucun effet sur la logique de sélection/construction des panneaux.
 local TABS = {
-    { key = "General", label = "Général" },
-    { key = "AuraTracking", label = "Auras", moduleName = "AuraTracking" },
-    { key = "CooldownCheck", label = "Cooldowns", moduleName = "CooldownCheck" },
-    { key = "Reminders", label = "Reminders", moduleName = "Reminders" },
-    { key = "Nicknames", label = "Surnoms", moduleName = "Nicknames" },
-    { key = "ReadyCheck", label = "Ready Check", moduleName = "ReadyCheck" },
-    { key = "Assignments", label = "Assignments", moduleName = "Assignments" },
-    { key = "PaceComparison", label = "Pace", moduleName = "PaceComparison" },
-    { key = "WAImports", label = "WA Imports", moduleName = "WAImports" },
-    { key = "VersionCheck", label = "Version", moduleName = "VersionCheck" },
-    { key = "BossTimelines", label = "Timelines", moduleName = "BossTimelines" },
-    { key = "EncounterAlerts", label = "Alerts", moduleName = "EncounterAlerts" },
+    { key = "General", label = "Général", group = 1 },
+    { key = "AuraTracking", label = "Auras", moduleName = "AuraTracking", group = 1 },
+    { key = "ReadyCheck", label = "Ready Check", moduleName = "ReadyCheck", group = 1 },
+
+    { key = "BossTimelines", label = "Codex", moduleName = "BossTimelines", group = 2 },
+    { key = "EncounterAlerts", label = "Alerts", moduleName = "EncounterAlerts", group = 2 },
+
+    { key = "AuraSounds", label = "Aura Sounds", moduleName = "AuraSounds", group = 3 },
+    { key = "Assignments", label = "Assignments", moduleName = "Assignments", group = 3 },
+    { key = "Nicknames", label = "Surnoms", moduleName = "Nicknames", group = 3 },
+
+    { key = "VersionCheck", label = "Version", moduleName = "VersionCheck", group = 4 },
 }
 
-local function CreateSidebarButton(parent, index, tab)
+-- fromBottom: si vrai, yOffset s'ancre au BOTTOMLEFT du parent (compté depuis le bas)
+-- au lieu du TOPLEFT (compté depuis le haut).
+local function CreateSidebarButton(parent, yOffset, tab, fromBottom)
     local btn = CreateFrame("Button", nil, parent)
     btn:SetSize(SIDEBAR_WIDTH, 24)
-    btn:SetPoint("TOPLEFT", parent, "TOPLEFT", 0, -(index - 1) * 24)
+    if fromBottom then
+        btn:SetPoint("BOTTOMLEFT", parent, "BOTTOMLEFT", 0, yOffset)
+    else
+        btn:SetPoint("TOPLEFT", parent, "TOPLEFT", 0, -yOffset)
+    end
 
     local bg = btn:CreateTexture(nil, "BACKGROUND")
     bg:SetAllPoints()
@@ -119,10 +127,40 @@ local function BuildFrame()
 
     local buttonList = CreateFrame("Frame", nil, sidebar)
     buttonList:SetPoint("TOPLEFT", 0, -10)
-    buttonList:SetSize(SIDEBAR_WIDTH, #TABS * 24)
+    buttonList:SetPoint("BOTTOMLEFT", 0, 10)
+    buttonList:SetWidth(SIDEBAR_WIDTH)
 
-    for i, tab in ipairs(TABS) do
-        tabButtons[tab.key] = CreateSidebarButton(buttonList, i, tab)
+    -- Regroupe les onglets par "group" avec un séparateur entre chaque groupe. Le dernier
+    -- groupe (ex: Version Check) est ancré au bas de la sidebar plutôt qu'à la suite des
+    -- autres, pour rester visible et distinct peu importe le nombre d'onglets au-dessus.
+    local GROUP_GAP = 14
+    local lastGroupID = TABS[#TABS].group
+
+    local y = 0
+    local currentGroup = nil
+    for _, tab in ipairs(TABS) do
+        if tab.group ~= lastGroupID then
+            if currentGroup and tab.group ~= currentGroup then
+                y = y + GROUP_GAP
+                local divider = buttonList:CreateTexture(nil, "ARTWORK")
+                divider:SetPoint("TOPLEFT", buttonList, "TOPLEFT", 8, -(y - GROUP_GAP / 2))
+                divider:SetPoint("TOPRIGHT", buttonList, "TOPRIGHT", -8, -(y - GROUP_GAP / 2))
+                divider:SetHeight(1)
+                divider:SetColorTexture(1, 1, 1, 0.08)
+            end
+            currentGroup = tab.group
+            tabButtons[tab.key] = CreateSidebarButton(buttonList, y, tab)
+            y = y + 24
+        end
+    end
+
+    local bottomY = 0
+    for i = #TABS, 1, -1 do
+        local tab = TABS[i]
+        if tab.group == lastGroupID then
+            tabButtons[tab.key] = CreateSidebarButton(buttonList, bottomY, tab, true)
+            bottomY = bottomY + 24
+        end
     end
 
     -- Zone de contenu (scrollable : chaque onglet peut dépasser la hauteur visible)

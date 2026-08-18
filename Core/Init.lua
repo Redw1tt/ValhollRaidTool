@@ -21,13 +21,9 @@ VRT.defaultDB = {
     modules = {
         AuraTracking = { enabled = true },
         AuraSounds = { enabled = true },
-        CooldownCheck = { enabled = true },
-        Reminders = { enabled = true },
         Nicknames = { enabled = true },
         ReadyCheck = { enabled = true },
         Assignments = { enabled = true },
-        PaceComparison = { enabled = true },
-        WAImports = { enabled = true },
         VersionCheck = { enabled = true },
         BossTimelines = { enabled = true },
         EncounterAlerts = { enabled = true },

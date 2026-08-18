@@ -43,4 +43,16 @@ VRT.Timelines["MidnightS2"]["NekzaliTheSoulcoiler"] = {
             },
         },
     },
+    -- Cooldowns de raid à prévoir/aligner sur ce combat (à ajuster selon la composition).
+    cooldowns = {
+        { text = "CD raid externe conseillé sur le premier Soulcoil Rite (24s de dégâts cumulatifs au raid)." },
+        { text = "Garder un CD de dégâts/défensif pour l'interphase mythique (Strike Team vs Drowned Echo)." },
+        { text = "Phase finale : le puits pulse en continu — prévoir un CD raid pour la fin du combat (Uncoiling)." },
+    },
+    -- Rappels courts à relire juste avant le pull ou une phase clé.
+    reminders = {
+        { text = "Ne jamais laisser un add atteindre le puits sans bouclier brisé — chaque add = énergie vers l'enrage." },
+        { text = "Brûler systématiquement les corps des adds morts (Slithering Flames) pour empêcher leur réinvocation." },
+        { text = "Mythique : désigner à l'avance qui interrompt Invoke — un raté = wipe garanti." },
+    },
 }

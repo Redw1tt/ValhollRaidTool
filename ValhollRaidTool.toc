@@ -41,13 +41,9 @@ EncounterAlerts\MidnightS2\VashnikTheMalignant.lua
 # Functional modules
 Modules\AuraTracking.lua
 Modules\AuraSounds.lua
-Modules\CooldownCheck.lua
-Modules\Reminders.lua
 Modules\Nicknames.lua
 Modules\ReadyCheck.lua
 Modules\Assignments.lua
-Modules\PaceComparison.lua
-Modules\WAImports.lua
 Modules\VersionCheck.lua
 
 # Options UI (last, depends on everything above)
