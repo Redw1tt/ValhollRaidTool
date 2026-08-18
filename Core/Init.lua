@@ -12,17 +12,6 @@ function VRT:GetModule(name)
     return self.modules[name]
 end
 
--- Enregistre un événement sur `frame` au tick suivant plutôt qu'immédiatement.
--- RegisterEvent("COMBAT_LOG_EVENT_UNFILTERED") peut être refusé (ADDON_ACTION_FORBIDDEN)
--- quand il est appelé depuis la pile d'exécution du chargement d'un fichier .lua ; le
--- reporter via C_Timer.After(0, ...) l'exécute dans un contexte d'exécution neuf et non
--- taint, ce qui règle le souci indépendamment de l'état de combat.
-function VRT:SafeRegisterEvent(frame, event)
-    C_Timer.After(0, function()
-        frame:RegisterEvent(event)
-    end)
-end
-
 VRT.defaultDB = {
     profileKey = "Default",
     general = {

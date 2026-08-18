@@ -214,7 +214,7 @@ local function BuildPlaceholderPanel(container, tab)
     if container.placeholderBuilt then return end
     container.placeholderBuilt = true
 
-    local text = container:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
+    local text = container:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
     text:SetPoint("TOPLEFT", container, "TOPLEFT", 0, 0)
     text:SetText("Pas encore de panneau de configuration pour " .. tab.label .. ".\nActive/désactive ce module depuis l'onglet Général.")
     text:SetJustifyH("LEFT")

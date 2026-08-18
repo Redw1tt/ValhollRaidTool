@@ -6,6 +6,14 @@ Format attendu pour chaque fichier de boss :
 VRT.Alerts["MidnightS1"]["Beloren"] = {
     { trigger = "SPELL_CAST_START", spellID = nil, message = "Interrompre !", sound = nil, color = {1, 0.2, 0.2} },
 }
+
+NOTE: le déclenchement en direct via COMBAT_LOG_EVENT_UNFILTERED a été retiré.
+RegisterEvent("COMBAT_LOG_EVENT_UNFILTERED") déclenche systématiquement
+ADDON_ACTION_FORBIDDEN dans cet environnement (confirmé indépendant du combat,
+du timing et du délai d'enregistrement — cause probable : interception de
+Frame:RegisterEvent par !BugGrabber). Les données d'alertes (VRT.Alerts) restent
+utilisables par d'autres modules (ex: affichage statique dans BossTimelines) ;
+seul le déclenchement automatique en combat est désactivé pour l'instant.
 ]]
 
 VRT.Alerts = VRT.Alerts or {}
@@ -55,27 +63,6 @@ function EncounterAlerts:StopEncounter()
     activeAlerts = nil
 end
 
-local function HandleCombatLogEvent()
-    if not activeAlerts then return end
-    local _, subEvent, _, sourceGUID, _, _, _, destGUID, _, _, _, spellID = CombatLogGetCurrentEventInfo()
-    local playerGUID = UnitGUID("player")
-
-    for _, alert in ipairs(activeAlerts) do
-        if alert.trigger == subEvent and alert.spellID == spellID then
-            -- Pour les événements d'aura (ex: SPELL_AURA_APPLIED), ne s'affiche que si le
-            -- joueur local est la cible, sinon toute application sur un autre membre du
-            -- raid déclencherait l'alerte "sur toi".
-            local isAuraEvent = subEvent:match("^SPELL_AURA_") ~= nil
-            if not isAuraEvent or destGUID == playerGUID then
-                ShowAlertText(alert.message, alert.color)
-                if alert.sound then
-                    PlaySoundFile(alert.sound, "Master")
-                end
-            end
-        end
-    end
-end
-
 alertFrame:RegisterEvent("ENCOUNTER_START")
 alertFrame:RegisterEvent("ENCOUNTER_END")
 alertFrame:SetScript("OnEvent", function(self, event, encounterID, encounterName, ...)
@@ -94,9 +81,5 @@ alertFrame:SetScript("OnEvent", function(self, event, encounterID, encounterName
         end
     elseif event == "ENCOUNTER_END" then
         EncounterAlerts:StopEncounter()
-    elseif event == "COMBAT_LOG_EVENT_UNFILTERED" then
-        HandleCombatLogEvent()
     end
 end)
-
-VRT:SafeRegisterEvent(alertFrame, "COMBAT_LOG_EVENT_UNFILTERED")
