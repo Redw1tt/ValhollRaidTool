@@ -11,7 +11,7 @@ local function BuildFrame()
 
     optionsFrame = CreateFrame("Frame", "ValhollOptionsFrame", UIParent)
     optionsFrame:SetSize(320, 460)
-    optionsFrame:SetPoint("CENTER")
+    optionsFrame:SetPoint("TOP", UIParent, "TOP", 0, -80)
     optionsFrame:SetMovable(true)
     optionsFrame:EnableMouse(true)
     optionsFrame:RegisterForDrag("LeftButton")
@@ -86,14 +86,21 @@ local function BuildFrame()
         anchor = check
     end
 
-    -- Bouton reset
+    -- Bouton reset (ancré sous le dernier module)
     local resetBtn = UI.CreateFlatButton(optionsFrame, "ValhollResetBtn", "Réinitialiser", 140, 22)
-    resetBtn:SetPoint("BOTTOM", 0, 14)
+    resetBtn:SetPoint("TOP", anchor, "BOTTOM", 0, -24)
     resetBtn.bg:SetColorTexture(0.3, 0.12, 0.12, 1)
     resetBtn:SetScript("OnClick", function()
         SlashCmdList["VALHOLLRAIDTOOL"]("reset")
         Options:Refresh()
     end)
+
+    -- Hauteur calculée à partir du nombre d'éléments empilés (titre + général + modules + reset)
+    local titleBarHeight = 28
+    local generalSectionHeight = 20 + 30 + 30 + 30
+    local modulesSectionHeight = 20 + (#moduleOrder * 30)
+    local resetSectionHeight = 24 + 22 + 20
+    optionsFrame:SetHeight(titleBarHeight + generalSectionHeight + modulesSectionHeight + resetSectionHeight)
 
     return optionsFrame
 end
