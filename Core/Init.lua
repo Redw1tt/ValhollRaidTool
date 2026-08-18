@@ -12,6 +12,23 @@ function VRT:GetModule(name)
     return self.modules[name]
 end
 
+-- Enregistre un événement sur `frame`, en différant l'appel à la fin du combat si le
+-- joueur est actuellement en combat (RegisterEvent sur certains événements, comme
+-- COMBAT_LOG_EVENT_UNFILTERED, déclenche ADDON_ACTION_FORBIDDEN quand appelé en combat,
+-- ce qui arrive typiquement après un /reload pendant un pull).
+function VRT:SafeRegisterEvent(frame, event)
+    if InCombatLockdown() then
+        local waiter = CreateFrame("Frame")
+        waiter:RegisterEvent("PLAYER_REGEN_ENABLED")
+        waiter:SetScript("OnEvent", function(self)
+            frame:RegisterEvent(event)
+            self:UnregisterEvent("PLAYER_REGEN_ENABLED")
+        end)
+    else
+        frame:RegisterEvent(event)
+    end
+end
+
 VRT.defaultDB = {
     profileKey = "Default",
     general = {

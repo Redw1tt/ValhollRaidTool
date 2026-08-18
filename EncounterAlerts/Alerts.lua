@@ -69,11 +69,8 @@ local function HandleCombatLogEvent()
     end
 end
 
--- Enregistré au chargement du fichier (jamais depuis un handler PLAYER_LOGIN retardé) :
--- s'enregistrer pendant un combat en cours déclenche ADDON_ACTION_FORBIDDEN.
 alertFrame:RegisterEvent("ENCOUNTER_START")
 alertFrame:RegisterEvent("ENCOUNTER_END")
-alertFrame:RegisterEvent("COMBAT_LOG_EVENT_UNFILTERED")
 alertFrame:SetScript("OnEvent", function(self, event, encounterID, encounterName, ...)
     local db = VRT.db and VRT.db.modules.EncounterAlerts
     if not db or not db.enabled then return end
@@ -94,3 +91,5 @@ alertFrame:SetScript("OnEvent", function(self, event, encounterID, encounterName
         HandleCombatLogEvent()
     end
 end)
+
+VRT:SafeRegisterEvent(alertFrame, "COMBAT_LOG_EVENT_UNFILTERED")
