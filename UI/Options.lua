@@ -4,7 +4,7 @@ local UI = VRT.UI
 local Options = {}
 VRT:RegisterModule("Options", Options)
 
-local PANEL_WIDTH, PANEL_HEIGHT = 520, 420
+local PANEL_WIDTH, PANEL_HEIGHT = 720, 480
 local SIDEBAR_WIDTH = 140
 local TITLEBAR_HEIGHT = 28
 
@@ -245,6 +245,12 @@ function Options:SelectTab(key)
         container:SetShown(tabKey == key)
     end
 
+    local tab
+    for _, t in ipairs(TABS) do
+        if t.key == key then tab = t; break end
+    end
+    local ownerModule = tab and tab.moduleName and VRT:GetModule(tab.moduleName)
+
     if not tabContainers[key] then
         local container = CreateFrame("Frame", nil, frame.content)
         container:SetPoint("TOPLEFT", 0, 0)
@@ -254,25 +260,15 @@ function Options:SelectTab(key)
         if key == "General" then
             BuildGeneralPanel(container)
             self:RefreshGeneral()
-        elseif key == "Nicknames" then
-            local nicknames = VRT:GetModule("Nicknames")
-            if nicknames and nicknames.BuildOptionsPanel then
-                nicknames:BuildOptionsPanel(container)
-            end
+        elseif ownerModule and ownerModule.BuildOptionsPanel then
+            ownerModule:BuildOptionsPanel(container)
         else
-            local tab
-            for _, t in ipairs(TABS) do
-                if t.key == key then tab = t; break end
-            end
             BuildPlaceholderPanel(container, tab or { label = key })
         end
     elseif key == "General" then
         self:RefreshGeneral()
-    elseif key == "Nicknames" then
-        local nicknames = VRT:GetModule("Nicknames")
-        if nicknames and nicknames.RefreshOptionsPanel then
-            nicknames:RefreshOptionsPanel()
-        end
+    elseif ownerModule and ownerModule.RefreshOptionsPanel then
+        ownerModule:RefreshOptionsPanel()
     end
 
     -- Chaque panneau déclare sa propre hauteur (container.contentHeight) ; le scroll
