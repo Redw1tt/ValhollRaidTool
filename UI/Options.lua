@@ -74,6 +74,11 @@ local function BuildFrame()
         "BossTimelines", "EncounterAlerts",
     }
 
+    -- Modules ayant leur propre fenêtre de configuration
+    local moduleConfigHandlers = {
+        Nicknames = function() VRT:GetModule("Nicknames"):ToggleWindow() end,
+    }
+
     local anchor = modulesLabel
     optionsFrame.moduleChecks = {}
     for _, moduleName in ipairs(moduleOrder) do
@@ -83,6 +88,14 @@ local function BuildFrame()
             print("|cFF25C7EB[Valholl]|r " .. moduleName .. " " .. (self:GetChecked() and "activé" or "désactivé") .. " (effectif après /reload).")
         end)
         optionsFrame.moduleChecks[moduleName] = check
+
+        local configHandler = moduleConfigHandlers[moduleName]
+        if configHandler then
+            local configBtn = UI.CreateFlatButton(optionsFrame, nil, "Configurer", 80, 18)
+            configBtn:SetPoint("LEFT", check.label, "RIGHT", 10, 0)
+            configBtn:SetScript("OnClick", configHandler)
+        end
+
         anchor = check
     end
 
