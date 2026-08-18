@@ -271,16 +271,23 @@ function Options:SelectTab(key)
         ownerModule:RefreshOptionsPanel()
     end
 
-    -- Chaque panneau déclare sa propre hauteur (container.contentHeight) ; le scroll
-    -- child adopte la plus grande valeur entre celle-ci et la zone visible. Le container
-    -- lui-même a aussi besoin d'une hauteur explicite : sans point BOTTOM ni SetHeight,
-    -- sa position (GetTop/GetBottom) n'est pas résolvable, ce qui casse l'ancrage de
-    -- tous ses enfants (ils restent "shown" mais jamais réellement visibles à l'écran).
-    local activeContainer = tabContainers[key]
-    local minHeight = frame.scrollFrame:GetHeight()
+    self:RefreshLayout()
+end
+
+-- Chaque panneau déclare sa propre hauteur (container.contentHeight) ; le scroll child
+-- adopte la plus grande valeur entre celle-ci et la zone visible. Le container lui-même
+-- a aussi besoin d'une hauteur explicite : sans point BOTTOM ni SetHeight, sa position
+-- (GetTop/GetBottom) n'est pas résolvable, ce qui casse l'ancrage de tous ses enfants
+-- (ils restent "shown" mais jamais réellement visibles à l'écran). Un module dont le
+-- contenu change de taille sans changer d'onglet (ex: repli/dépli d'une section) doit
+-- rappeler ceci après avoir mis à jour son propre container.contentHeight.
+function Options:RefreshLayout()
+    if not optionsFrame or not activeTabKey then return end
+    local activeContainer = tabContainers[activeTabKey]
+    local minHeight = optionsFrame.scrollFrame:GetHeight()
     local wantedHeight = (activeContainer and activeContainer.contentHeight) or minHeight
     local finalHeight = math.max(wantedHeight, minHeight)
-    frame.content:SetHeight(finalHeight)
+    optionsFrame.content:SetHeight(finalHeight)
     if activeContainer then
         activeContainer:SetHeight(activeContainer.contentHeight or finalHeight)
     end
