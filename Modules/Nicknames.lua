@@ -102,7 +102,12 @@ local function BuildFrame()
 
     nicknameFrame = CreateFrame("Frame", "ValhollNicknamesFrame", UIParent)
     nicknameFrame:SetSize(320, 360)
-    nicknameFrame:SetPoint("CENTER")
+    local optionsFrame = _G["ValhollOptionsFrame"]
+    if optionsFrame then
+        nicknameFrame:SetPoint("TOPLEFT", optionsFrame, "TOPRIGHT", 10, 0)
+    else
+        nicknameFrame:SetPoint("CENTER", UIParent, "CENTER", 200, 0)
+    end
     nicknameFrame:SetMovable(true)
     nicknameFrame:EnableMouse(true)
     nicknameFrame:RegisterForDrag("LeftButton")
