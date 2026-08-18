@@ -144,58 +144,78 @@ end
 local generalPanelBuilt = false
 local generalWidgets = {}
 
+local SECTION_WIDTH = 560
+
 local function BuildGeneralPanel(container)
     if generalPanelBuilt then return end
     generalPanelBuilt = true
 
-    local lockCheck = UI.CreateFlatCheck(container, "ValhollLockCheck", "Verrouiller les fenêtres", container, 0)
+    -- Bloc "Général" : verrouillage et échelle des fenêtres flottantes
+    local generalPanel = UI.CreateSectionPanel(container, "Général", SECTION_WIDTH)
+    generalPanel:SetPoint("TOPLEFT", container, "TOPLEFT", 0, 0)
+
+    local lockCheck = UI.CreateFlatCheck(generalPanel, "ValhollLockCheck", "Verrouiller les fenêtres", generalPanel.contentTop, -14)
     lockCheck:ClearAllPoints()
-    lockCheck:SetPoint("TOPLEFT", container, "TOPLEFT", 0, 0)
+    lockCheck:SetPoint("TOPLEFT", generalPanel.contentTop, "BOTTOMLEFT", 12, -14)
     lockCheck:SetScript("OnClick", function(self)
         VRT.db.general.locked = self:GetChecked() and true or false
         VRT:GetModule("AnchorManager"):SetAllLocked(VRT.db.general.locked)
     end)
     generalWidgets.lockCheck = lockCheck
 
-    local scaleSlider = UI.CreateFlatSlider(container, "ValhollScaleSlider", "Échelle globale", 0.5, 2.0, 0.1, lockCheck, -30)
+    local scaleSlider = UI.CreateFlatSlider(generalPanel, "ValhollScaleSlider", "Échelle globale", 0.5, 2.0, 0.1, lockCheck, -30)
+    scaleSlider:ClearAllPoints()
+    scaleSlider:SetPoint("TOPLEFT", lockCheck, "BOTTOMLEFT", 0, -30)
     scaleSlider:SetScript("OnValueChanged", function(self, value)
         VRT.db.general.scale = value
         self.valueText:SetText(string.format("%.1f", value))
     end)
     generalWidgets.scaleSlider = scaleSlider
 
-    local modulesLabel = UI.CreateSectionLabel(container, scaleSlider, "Modules actifs", -30)
-    modulesLabel:ClearAllPoints()
-    modulesLabel:SetPoint("TOPLEFT", scaleSlider, "BOTTOMLEFT", 0, -30)
+    local generalPanelHeight = 24 + 14 + 16 + 30 + 14 + 16
+    generalPanel:SetHeight(generalPanelHeight)
 
-    local anchor = modulesLabel
+    -- Bloc "Modules actifs" : activer/désactiver chaque module (effectif après /reload)
+    local modulesPanel = UI.CreateSectionPanel(container, "Modules actifs", SECTION_WIDTH)
+    modulesPanel:SetPoint("TOPLEFT", generalPanel, "BOTTOMLEFT", 0, -16)
+
+    local anchor = modulesPanel.contentTop
     generalWidgets.moduleChecks = {}
+    local numModuleChecks = 0
     for _, tab in ipairs(TABS) do
         if tab.moduleName then
-            local check = UI.CreateFlatCheck(container, "ValhollModCheck" .. tab.moduleName, tab.label, anchor, -10)
+            local check = UI.CreateFlatCheck(modulesPanel, "ValhollModCheck" .. tab.moduleName, tab.label, anchor, -10)
+            check:ClearAllPoints()
+            check:SetPoint("TOPLEFT", anchor, "BOTTOMLEFT", 12, -10)
             check:SetScript("OnClick", function(self)
                 VRT.db.modules[tab.moduleName].enabled = self:GetChecked() and true or false
                 print("|cFF25C7EB[Valholl]|r " .. tab.label .. " " .. (self:GetChecked() and "activé" or "désactivé") .. " (effectif après /reload).")
             end)
             generalWidgets.moduleChecks[tab.moduleName] = check
             anchor = check
+            numModuleChecks = numModuleChecks + 1
         end
     end
 
-    local resetBtn = UI.CreateFlatButton(container, "ValhollResetBtn", "Réinitialiser", 140, 22)
-    resetBtn:SetPoint("TOP", anchor, "BOTTOM", 0, -24)
+    local modulesPanelHeight = 24 + (numModuleChecks * 26) + 14
+    modulesPanel:SetHeight(modulesPanelHeight)
+
+    -- Bloc "Gestion" : action de réinitialisation, mise en avant comme la référence
+    local managePanel = UI.CreateSectionPanel(container, "Gestion", SECTION_WIDTH)
+    managePanel:SetPoint("TOPLEFT", modulesPanel, "BOTTOMLEFT", 0, -16)
+
+    local resetBtn = UI.CreateFlatButton(managePanel, "ValhollResetBtn", "Réinitialiser la configuration", 220, 24)
+    resetBtn:SetPoint("TOPLEFT", managePanel.contentTop, "BOTTOMLEFT", 12, -14)
     resetBtn.bg:SetColorTexture(0.3, 0.12, 0.12, 1)
     resetBtn:SetScript("OnClick", function()
         SlashCmdList["VALHOLLRAIDTOOL"]("reset")
         Options:RefreshGeneral()
     end)
 
-    -- Hauteur totale connue: lockCheck(16) + slider(30+14) + label(30+20) + N checks(26 chacun) + reset(24+22)
-    local numModuleChecks = 0
-    for _, tab in ipairs(TABS) do
-        if tab.moduleName then numModuleChecks = numModuleChecks + 1 end
-    end
-    container.contentHeight = 16 + 30 + 14 + 30 + 20 + (numModuleChecks * 26) + 24 + 22 + 20
+    local managePanelHeight = 24 + 14 + 24 + 14
+    managePanel:SetHeight(managePanelHeight)
+
+    container.contentHeight = generalPanelHeight + 16 + modulesPanelHeight + 16 + managePanelHeight + 20
 end
 
 function Options:RefreshGeneral()

@@ -26,6 +26,35 @@ function UI.ApplyBorder(frame, r, g, b, a)
     end
 end
 
+-- Bloc de section : fond légèrement teinté + bordure + titre en haut, pour regrouper
+-- visuellement des options apparentées (ex: dans un panneau d'options à plusieurs blocs).
+function UI.CreateSectionPanel(parent, title, width)
+    local panel = CreateFrame("Frame", nil, parent)
+    if width then panel:SetWidth(width) end
+
+    local bg = panel:CreateTexture(nil, "BACKGROUND")
+    bg:SetAllPoints()
+    bg:SetColorTexture(1, 1, 1, 0.03)
+    UI.ApplyBorder(panel, 0.05, 0.05, 0.05, 1)
+
+    local titleBar = panel:CreateTexture(nil, "ARTWORK")
+    titleBar:SetPoint("TOPLEFT", 0, 0)
+    titleBar:SetPoint("TOPRIGHT", 0, 0)
+    titleBar:SetHeight(24)
+    titleBar:SetColorTexture(VRT.ACCENT[1] * 0.16, VRT.ACCENT[2] * 0.16, VRT.ACCENT[3] * 0.16, 1)
+
+    local titleText = panel:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    titleText:SetPoint("LEFT", titleBar, "LEFT", 10, 0)
+    titleText:SetTextColor(VRT.ACCENT[1], VRT.ACCENT[2], VRT.ACCENT[3])
+    titleText:SetText(title or "")
+
+    panel.titleBar = titleBar
+    panel.titleText = titleText
+    panel.contentTop = titleBar -- point d'ancrage pour le premier widget de contenu
+
+    return panel
+end
+
 function UI.CreateSectionLabel(parent, anchor, text, yOff)
     local label = parent:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
     label:SetPoint("TOPLEFT", anchor, "BOTTOMLEFT", 0, yOff or -16)
