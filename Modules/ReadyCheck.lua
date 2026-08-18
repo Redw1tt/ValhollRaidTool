@@ -40,31 +40,31 @@ function ReadyCheck:UpdateDisplay()
     end
 end
 
-function ReadyCheck:OnInitialize()
-    local db = VRT.db.modules.ReadyCheck
+-- Enregistré au chargement du fichier (pas dans un handler PLAYER_LOGIN retardé) :
+-- s'enregistrer pendant un combat en cours peut déclencher ADDON_ACTION_FORBIDDEN.
+rcFrame:RegisterEvent("READY_CHECK")
+rcFrame:RegisterEvent("READY_CHECK_CONFIRM")
+rcFrame:RegisterEvent("READY_CHECK_FINISHED")
+rcFrame:SetScript("OnEvent", function(self, event, unit, isReady)
+    local db = VRT.db and VRT.db.modules.ReadyCheck
     if not db or not db.enabled then return end
 
-    rcFrame:RegisterEvent("READY_CHECK")
-    rcFrame:RegisterEvent("READY_CHECK_CONFIRM")
-    rcFrame:RegisterEvent("READY_CHECK_FINISHED")
-    rcFrame:SetScript("OnEvent", function(self, event, unit, isReady)
-        if event == "READY_CHECK" then
-            pending = {}
-            local numMembers = GetNumGroupMembers()
-            local prefix = IsInRaid() and "raid" or "party"
-            for i = 1, numMembers do
-                local u = IsInRaid() and (prefix .. i) or (i < numMembers and (prefix .. i) or "player")
-                if UnitExists(u) then pending[u] = false end
-            end
-            ReadyCheck:UpdateDisplay()
-        elseif event == "READY_CHECK_CONFIRM" then
-            pending[unit] = isReady
-            ReadyCheck:UpdateDisplay()
-        elseif event == "READY_CHECK_FINISHED" then
-            local display = VRT.frames.ReadyCheckDisplay
-            if display then
-                C_Timer.After(3, function() display:Hide() end)
-            end
+    if event == "READY_CHECK" then
+        pending = {}
+        local numMembers = GetNumGroupMembers()
+        local prefix = IsInRaid() and "raid" or "party"
+        for i = 1, numMembers do
+            local u = IsInRaid() and (prefix .. i) or (i < numMembers and (prefix .. i) or "player")
+            if UnitExists(u) then pending[u] = false end
         end
-    end)
-end
+        ReadyCheck:UpdateDisplay()
+    elseif event == "READY_CHECK_CONFIRM" then
+        pending[unit] = isReady
+        ReadyCheck:UpdateDisplay()
+    elseif event == "READY_CHECK_FINISHED" then
+        local display = VRT.frames.ReadyCheckDisplay
+        if display then
+            C_Timer.After(3, function() display:Hide() end)
+        end
+    end
+end)

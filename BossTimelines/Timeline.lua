@@ -49,25 +49,25 @@ function BossTimelines:GetElapsed()
     return GetTime() - encounterStart
 end
 
-function BossTimelines:OnInitialize()
-    local db = VRT.db.modules.BossTimelines
+-- Enregistré au chargement du fichier (pas dans un handler PLAYER_LOGIN retardé) :
+-- s'enregistrer pendant un combat en cours peut déclencher ADDON_ACTION_FORBIDDEN.
+timerFrame:RegisterEvent("ENCOUNTER_START")
+timerFrame:RegisterEvent("ENCOUNTER_END")
+timerFrame:SetScript("OnEvent", function(self, event, encounterID, encounterName, ...)
+    local db = VRT.db and VRT.db.modules.BossTimelines
     if not db or not db.enabled then return end
 
-    timerFrame:RegisterEvent("ENCOUNTER_START")
-    timerFrame:RegisterEvent("ENCOUNTER_END")
-    timerFrame:SetScript("OnEvent", function(self, event, encounterID, encounterName, ...)
-        if event == "ENCOUNTER_START" then
-            for tier, bosses in pairs(VRT.BOSS_LIST) do
-                for _, boss in ipairs(bosses) do
-                    local timeline = BossTimelines:GetTimeline(tier, boss)
-                    if timeline and timeline.journalEncounterID == encounterID then
-                        BossTimelines:StartEncounter(tier, boss)
-                        return
-                    end
+    if event == "ENCOUNTER_START" then
+        for tier, bosses in pairs(VRT.BOSS_LIST) do
+            for _, boss in ipairs(bosses) do
+                local timeline = BossTimelines:GetTimeline(tier, boss)
+                if timeline and timeline.journalEncounterID == encounterID then
+                    BossTimelines:StartEncounter(tier, boss)
+                    return
                 end
             end
-        elseif event == "ENCOUNTER_END" then
-            BossTimelines:StopEncounter()
         end
-    end)
-end
+    elseif event == "ENCOUNTER_END" then
+        BossTimelines:StopEncounter()
+    end
+end)

@@ -61,40 +61,36 @@ local function HandleCombatLogEvent()
 
     for _, alert in ipairs(activeAlerts) do
         if alert.trigger == subEvent and alert.spellID == spellID then
-            local db = VRT.db.modules.EncounterAlerts
-            if db and db.enabled then
-                ShowAlertText(alert.message, alert.color)
-                if alert.sound then
-                    PlaySoundFile(alert.sound, "Master")
-                end
+            ShowAlertText(alert.message, alert.color)
+            if alert.sound then
+                PlaySoundFile(alert.sound, "Master")
             end
         end
     end
 end
 
-function EncounterAlerts:OnInitialize()
-    local db = VRT.db.modules.EncounterAlerts
+-- Enregistré au chargement du fichier (jamais depuis un handler PLAYER_LOGIN retardé) :
+-- s'enregistrer pendant un combat en cours déclenche ADDON_ACTION_FORBIDDEN.
+alertFrame:RegisterEvent("ENCOUNTER_START")
+alertFrame:RegisterEvent("ENCOUNTER_END")
+alertFrame:RegisterEvent("COMBAT_LOG_EVENT_UNFILTERED")
+alertFrame:SetScript("OnEvent", function(self, event, encounterID, encounterName, ...)
+    local db = VRT.db and VRT.db.modules.EncounterAlerts
     if not db or not db.enabled then return end
 
-    alertFrame:RegisterEvent("ENCOUNTER_START")
-    alertFrame:RegisterEvent("ENCOUNTER_END")
-    alertFrame:RegisterEvent("COMBAT_LOG_EVENT_UNFILTERED")
-    alertFrame:SetScript("OnEvent", function(self, event, encounterID, encounterName, ...)
-        if event == "ENCOUNTER_START" then
-            for tier, bosses in pairs(VRT.BOSS_LIST) do
-                for _, boss in ipairs(bosses) do
-                    local alerts = EncounterAlerts:GetAlerts(tier, boss)
-                    local timeline = VRT:GetModule("BossTimelines"):GetTimeline(tier, boss)
-                    if timeline and timeline.journalEncounterID == encounterID then
-                        EncounterAlerts:StartEncounter(tier, boss)
-                        return
-                    end
+    if event == "ENCOUNTER_START" then
+        for tier, bosses in pairs(VRT.BOSS_LIST) do
+            for _, boss in ipairs(bosses) do
+                local timeline = VRT:GetModule("BossTimelines"):GetTimeline(tier, boss)
+                if timeline and timeline.journalEncounterID == encounterID then
+                    EncounterAlerts:StartEncounter(tier, boss)
+                    return
                 end
             end
-        elseif event == "ENCOUNTER_END" then
-            EncounterAlerts:StopEncounter()
-        elseif event == "COMBAT_LOG_EVENT_UNFILTERED" then
-            HandleCombatLogEvent()
         end
-    end)
-end
+    elseif event == "ENCOUNTER_END" then
+        EncounterAlerts:StopEncounter()
+    elseif event == "COMBAT_LOG_EVENT_UNFILTERED" then
+        HandleCombatLogEvent()
+    end
+end)

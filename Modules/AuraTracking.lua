@@ -44,11 +44,16 @@ function AuraTracking:OnInitialize()
     local db = VRT.db.modules.AuraTracking
     if not db or not db.enabled then return end
     db.watched = db.watched or {}
-
-    watchFrame:RegisterEvent("UNIT_AURA")
-    watchFrame:SetScript("OnEvent", function(self, event, unit)
-        AuraTracking:ScanUnit(unit)
-        local sounds = VRT:GetModule("AuraSounds")
-        if sounds then sounds:OnAuraUpdate(unit) end
-    end)
 end
+
+-- Enregistré au chargement du fichier (pas dans un handler PLAYER_LOGIN retardé) :
+-- s'enregistrer pendant un combat en cours peut déclencher ADDON_ACTION_FORBIDDEN.
+watchFrame:RegisterEvent("UNIT_AURA")
+watchFrame:SetScript("OnEvent", function(self, event, unit)
+    local db = VRT.db and VRT.db.modules.AuraTracking
+    if not db or not db.enabled then return end
+
+    AuraTracking:ScanUnit(unit)
+    local sounds = VRT:GetModule("AuraSounds")
+    if sounds then sounds:OnAuraUpdate(unit) end
+end)
