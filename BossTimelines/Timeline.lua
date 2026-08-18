@@ -90,52 +90,72 @@ end
 
 -- Icônes de rôle natives (feuille de sprite Blizzard standard des rôles donjon/groupe) et
 -- détection depuis un préfixe "[Tank]"/"[Heal]"/"[DPS]" au début du texte d'une mécanique.
+-- Le préfixe est retiré du texte affiché une fois converti en icône.
 local ROLE_ICON_TEXTURE = "Interface\\LFGFrame\\UI-LFG-ICON-PORTRAITROLES"
 local ROLE_ICON_COORDS = {
     Tank = { 0, 0.296875, 0, 0.296875 },
     Heal = { 0.296875, 0.59375, 0, 0.296875 },
     DPS  = { 0.59375, 0.890625, 0, 0.296875 },
 }
+-- Chaque rôle a deux formes à reconnaître : "[Tank]" seul, ou "[Tank/NomDuBoss]" avec un
+-- suffixe. Deux motifs distincts (plutôt qu'un seul motif gourmand) évitent que le "*"
+-- ne dévore le reste de la ligne quand il n'y a pas de "]" de fermeture supplémentaire.
 local ROLE_PATTERNS = {
-    { pattern = "^%[Tank[/%]]", role = "Tank" },
-    { pattern = "^%[Heal[/%]]", role = "Heal" },
-    { pattern = "^%[DPS[/%]]", role = "DPS" },
+    { pattern = "^%[Tank%]%s*", role = "Tank" },
+    { pattern = "^%[Tank/[^%]]*%]%s*", role = "Tank" },
+    { pattern = "^%[Heal%]%s*", role = "Heal" },
+    { pattern = "^%[Heal/[^%]]*%]%s*", role = "Heal" },
+    { pattern = "^%[DPS%]%s*", role = "DPS" },
+    { pattern = "^%[DPS/[^%]]*%]%s*", role = "DPS" },
 }
 
-local function DetectRole(text)
+-- Renvoie le rôle détecté (ou nil) et le texte débarrassé de son préfixe "[Tank]"/
+-- "[Tank/Boss]" etc. Le texte original est retourné inchangé si aucun rôle ne matche.
+local function StripRolePrefix(text)
     for _, entry in ipairs(ROLE_PATTERNS) do
-        if text:match(entry.pattern) then
-            return entry.role
+        local prefixEnd = text:match(entry.pattern)
+        if prefixEnd then
+            return entry.role, text:sub(#prefixEnd + 1)
         end
     end
-    return nil
+    return nil, text
 end
 
--- Ligne "puce + texte" générique, réutilisée pour Cooldowns et Reminders (simple liste
--- plate, contrairement aux Mécaniques qui ont des en-têtes de phase). `withRoleIcon`
--- réserve une icône de rôle à gauche du texte (utilisé par les mécaniques uniquement).
-local function AcquireBulletRow(pool, index, parent, accentColor, withRoleIcon)
+local SPELL_ICON_SIZE = 22
+
+-- Ligne "icône de sort + [icône de rôle] + texte", réutilisée pour Mécaniques, Cooldowns
+-- et Reminders. `withSpellIcon` réserve la place pour l'icône réelle du sort (spellID) ;
+-- l'icône de rôle apparaît automatiquement si le texte commence par un préfixe de rôle.
+local function AcquireBulletRow(pool, index, parent, accentColor, withSpellIcon)
     local row = pool[index]
     if row then return row end
 
     row = CreateFrame("Frame", nil, parent)
     row:SetSize(DETAIL_WIDTH, ROW_HEIGHT)
 
-    local bullet = row:CreateTexture(nil, "ARTWORK")
-    bullet:SetSize(4, 4)
-    bullet:SetPoint("LEFT", row, "LEFT", 4, 0)
-    bullet:SetColorTexture(accentColor[1], accentColor[2], accentColor[3], 0.9)
-    row.bullet = bullet
-
     local textLeftOffset = 16
-    if withRoleIcon then
+
+    if withSpellIcon then
+        local spellIcon = row:CreateTexture(nil, "ARTWORK")
+        spellIcon:SetSize(SPELL_ICON_SIZE, SPELL_ICON_SIZE)
+        spellIcon:SetPoint("LEFT", row, "LEFT", 0, 0)
+        spellIcon:SetTexCoord(0.08, 0.92, 0.08, 0.92)
+        row.spellIcon = spellIcon
+
         local roleIcon = row:CreateTexture(nil, "OVERLAY")
         roleIcon:SetSize(14, 14)
-        roleIcon:SetPoint("LEFT", row, "LEFT", 14, 0)
+        roleIcon:SetPoint("LEFT", spellIcon, "RIGHT", 4, 0)
         roleIcon:SetTexture(ROLE_ICON_TEXTURE)
         roleIcon:Hide()
         row.roleIcon = roleIcon
-        textLeftOffset = 32
+
+        textLeftOffset = SPELL_ICON_SIZE + 4 + 14 + 6
+    else
+        local bullet = row:CreateTexture(nil, "ARTWORK")
+        bullet:SetSize(4, 4)
+        bullet:SetPoint("LEFT", row, "LEFT", 4, 0)
+        bullet:SetColorTexture(accentColor[1], accentColor[2], accentColor[3], 0.9)
+        row.bullet = bullet
     end
 
     local text = row:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
@@ -150,18 +170,31 @@ local function AcquireBulletRow(pool, index, parent, accentColor, withRoleIcon)
     return row
 end
 
--- Affiche/masque l'icône de rôle d'une ligne et ajuste la position du texte en
--- conséquence. Le préfixe "[Tank]"/"[Heal]"/"[DPS]" reste dans le texte affiché.
-local function ApplyRowRole(row, rawText)
-    if not row.roleIcon then return end
-    local role = DetectRole(rawText)
-    local coords = role and ROLE_ICON_COORDS[role]
-    if coords then
-        row.roleIcon:SetTexCoord(coords[1], coords[2], coords[3], coords[4])
-        row.roleIcon:Show()
-    else
-        row.roleIcon:Hide()
+local function GetSpellIconTexture(spellID)
+    if not spellID then return "Interface\\Icons\\INV_Misc_QuestionMark" end
+    local info = C_Spell and C_Spell.GetSpellInfo and C_Spell.GetSpellInfo(spellID)
+    if info and info.iconID then return info.iconID end
+    return "Interface\\Icons\\INV_Misc_QuestionMark"
+end
+
+-- Met à jour l'icône de sort (si spellID fourni), l'icône de rôle et le texte nettoyé
+-- d'une ligne de mécanique.
+local function ApplyMechRow(row, spellID, rawText)
+    if row.spellIcon then
+        row.spellIcon:SetTexture(GetSpellIconTexture(spellID))
     end
+
+    local role, cleanText = StripRolePrefix(rawText)
+    if row.roleIcon then
+        local coords = role and ROLE_ICON_COORDS[role]
+        if coords then
+            row.roleIcon:SetTexCoord(coords[1], coords[2], coords[3], coords[4])
+            row.roleIcon:Show()
+        else
+            row.roleIcon:Hide()
+        end
+    end
+    row.text:SetText(cleanText)
 end
 
 -- Empile une liste plate d'entrées {text=...} sous `anchorFrame`, chacune dans son propre
@@ -218,14 +251,12 @@ local function LayoutMechanics(timeline, anchorFrame)
             local row = AcquireBulletRow(mechRowPool, rowCount, detailContainer, VRT.ACCENT, true)
             row:ClearAllPoints()
             row:SetPoint("TOPLEFT", anchorFrame, "TOPLEFT", 0, -y)
-            local eventText = event.text or ""
-            row.text:SetText(eventText)
-            ApplyRowRole(row, eventText)
+            ApplyMechRow(row, event.spellID, event.text or "")
             row:Show()
 
             local lineHeight = row.text:GetStringHeight()
             local rowHeight = math.max(ROW_HEIGHT, lineHeight + 6)
-            row:SetHeight(rowHeight)
+            row:SetHeight(math.max(rowHeight, SPELL_ICON_SIZE))
             y = y + rowHeight + 2
         end
 
