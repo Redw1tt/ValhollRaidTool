@@ -1,0 +1,9 @@
+## Interface: 120100
+## Title: Valh|cFF25C7EBoll|r Raid Tool
+## Notes: Suivi des interruptions et outils de raid par Redw1tt (/vrt). Licence GPL-3.0.
+## Author: Redw1tt
+## Version: 2.0.0
+## SavedVariables: ValhollDB
+## X-License: GPL-3.0
+
+ValhollRaidTool.lua
