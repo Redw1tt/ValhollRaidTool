@@ -88,14 +88,13 @@ local function HideAllDetailRows()
     HideList(reminderRowPool)
 end
 
--- Icônes de rôle natives (feuille de sprite Blizzard standard des rôles donjon/groupe) et
--- détection depuis un préfixe "[Tank]"/"[Heal]"/"[DPS]" au début du texte d'une mécanique.
--- Le préfixe est retiré du texte affiché une fois converti en icône.
-local ROLE_ICON_TEXTURE = "Interface\\LFGFrame\\UI-LFG-ICON-PORTRAITROLES"
-local ROLE_ICON_COORDS = {
-    Tank = { 0, 0.296875, 0, 0.296875 },
-    Heal = { 0.296875, 0.59375, 0, 0.296875 },
-    DPS  = { 0.59375, 0.890625, 0, 0.296875 },
+-- Icônes de rôle natives (atlas de rôle standard Blizzard : bouclier bleu / croix verte /
+-- épée rouge) et détection depuis un préfixe "[Tank]"/"[Heal]"/"[DPS]" au début du texte
+-- d'une mécanique. Le préfixe est retiré du texte affiché une fois converti en icône.
+local ROLE_ICON_ATLAS = {
+    Tank = "UI-LFG-RoleIcon-Tank",
+    Heal = "UI-LFG-RoleIcon-Healer",
+    DPS  = "UI-LFG-RoleIcon-DPS",
 }
 -- Chaque rôle a deux formes à reconnaître : "[Tank]" seul, ou "[Tank/NomDuBoss]" avec un
 -- suffixe. Deux motifs distincts (plutôt qu'un seul motif gourmand) évitent que le "*"
@@ -143,9 +142,8 @@ local function AcquireBulletRow(pool, index, parent, accentColor, withSpellIcon)
         row.spellIcon = spellIcon
 
         local roleIcon = row:CreateTexture(nil, "OVERLAY")
-        roleIcon:SetSize(14, 14)
+        roleIcon:SetSize(16, 16)
         roleIcon:SetPoint("LEFT", spellIcon, "RIGHT", 4, 0)
-        roleIcon:SetTexture(ROLE_ICON_TEXTURE)
         roleIcon:Hide()
         row.roleIcon = roleIcon
 
@@ -186,9 +184,9 @@ local function ApplyMechRow(row, spellID, rawText)
 
     local role, cleanText = StripRolePrefix(rawText)
     if row.roleIcon then
-        local coords = role and ROLE_ICON_COORDS[role]
-        if coords then
-            row.roleIcon:SetTexCoord(coords[1], coords[2], coords[3], coords[4])
+        local atlas = role and ROLE_ICON_ATLAS[role]
+        if atlas then
+            row.roleIcon:SetAtlas(atlas, false)
             row.roleIcon:Show()
         else
             row.roleIcon:Hide()
