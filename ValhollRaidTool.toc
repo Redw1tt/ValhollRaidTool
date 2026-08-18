@@ -18,28 +18,6 @@ UI\AnchorWindow.lua
 BossTimelines\Timeline.lua
 EncounterAlerts\Alerts.lua
 
-# Boss data - Midnight Saison 1
-BossTimelines\MidnightS1\Beloren.lua
-BossTimelines\MidnightS1\Chimaerus.lua
-BossTimelines\MidnightS1\CrownOfTheCosmos.lua
-BossTimelines\MidnightS1\FallenKingSalhadaar.lua
-BossTimelines\MidnightS1\ImperatorAverzian.lua
-BossTimelines\MidnightS1\LightblindedVanguard.lua
-BossTimelines\MidnightS1\MidnightFalls.lua
-BossTimelines\MidnightS1\Rotmire.lua
-BossTimelines\MidnightS1\VaelgorEzzorak.lua
-BossTimelines\MidnightS1\Vorasius.lua
-EncounterAlerts\MidnightS1\Beloren.lua
-EncounterAlerts\MidnightS1\Chimaerus.lua
-EncounterAlerts\MidnightS1\CrownOfTheCosmos.lua
-EncounterAlerts\MidnightS1\FallenKingSalhadaar.lua
-EncounterAlerts\MidnightS1\ImperatorAverzian.lua
-EncounterAlerts\MidnightS1\LightblindedVanguard.lua
-EncounterAlerts\MidnightS1\MidnightFalls.lua
-EncounterAlerts\MidnightS1\Rotmire.lua
-EncounterAlerts\MidnightS1\VaelgorEzzorak.lua
-EncounterAlerts\MidnightS1\Vorasius.lua
-
 # Boss data - Midnight Saison 2
 BossTimelines\MidnightS2\EntombedSentinels.lua
 BossTimelines\MidnightS2\NekzaliTheSoulcoiler.lua

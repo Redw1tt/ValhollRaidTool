@@ -3,8 +3,8 @@ local addonName, VRT = ...
 --[[
 Format attendu pour chaque fichier de boss (rempli au fur et à mesure des kills) :
 
-VRT.Timelines["MidnightS1"]["Beloren"] = {
-    name = "Beloren",
+VRT.Timelines["MidnightS2"]["Sszorak"] = {
+    name = "Sszorak",
     journalEncounterID = nil,
     phases = {
         { name = "Phase 1", events = {
@@ -50,16 +50,93 @@ function BossTimelines:GetElapsed()
 end
 
 -- ===== Panneau intégré au shell d'options (onglet "Timelines") =====
+local UI = VRT.UI
 
-local optionsContainer, bossListContainer, detailContainer
+local ROW_HEIGHT = 20
+local PHASE_HEADER_HEIGHT = 26
+local SECTION_GAP = 10
+local DETAIL_WIDTH = 580
+
+local bossListContainer, detailContainer
 local selectedTier, selectedBoss
 local bossButtons = {}
 local tierLabels = {}
-local phaseLabelPool = {}
+local phaseHeaderPool = {}
 local eventRowPool = {}
 
+-- Chaque ligne d'événement/phase est positionnée en absolu (offset Y calculé une seule
+-- fois, pas ancrée au widget précédent) pour éviter tout effet d'escalier cumulatif.
+local function LayoutDetail(timeline)
+    local y = 0
+    local phaseCount, rowCount = 0, 0
+
+    for _, phase in ipairs(timeline.phases or {}) do
+        phaseCount = phaseCount + 1
+        local header = phaseHeaderPool[phaseCount]
+        if not header then
+            header = CreateFrame("Frame", nil, detailContainer)
+            header:SetSize(DETAIL_WIDTH, PHASE_HEADER_HEIGHT)
+
+            local bg = header:CreateTexture(nil, "BACKGROUND")
+            bg:SetAllPoints()
+            bg:SetColorTexture(VRT.ACCENT[1] * 0.16, VRT.ACCENT[2] * 0.16, VRT.ACCENT[3] * 0.16, 1)
+            header.bg = bg
+
+            local text = header:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+            text:SetPoint("LEFT", header, "LEFT", 8, 0)
+            text:SetTextColor(VRT.ACCENT[1], VRT.ACCENT[2], VRT.ACCENT[3])
+            header.text = text
+
+            phaseHeaderPool[phaseCount] = header
+        end
+        header:ClearAllPoints()
+        header:SetPoint("TOPLEFT", detailContainer.eventsAnchor, "TOPLEFT", 0, -y)
+        header.text:SetText(phase.name or ("Phase " .. phaseCount))
+        header:Show()
+        y = y + PHASE_HEADER_HEIGHT + 4
+
+        for _, event in ipairs(phase.events or {}) do
+            rowCount = rowCount + 1
+            local row = eventRowPool[rowCount]
+            if not row then
+                row = CreateFrame("Frame", nil, detailContainer)
+                row:SetSize(DETAIL_WIDTH, ROW_HEIGHT)
+
+                local bullet = row:CreateTexture(nil, "ARTWORK")
+                bullet:SetSize(4, 4)
+                bullet:SetPoint("LEFT", row, "LEFT", 4, 0)
+                bullet:SetColorTexture(VRT.ACCENT[1], VRT.ACCENT[2], VRT.ACCENT[3], 0.9)
+                row.bullet = bullet
+
+                local text = row:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+                text:SetPoint("LEFT", row, "LEFT", 16, 0)
+                text:SetPoint("RIGHT", row, "RIGHT", 0, 0)
+                text:SetJustifyH("LEFT")
+                text:SetWordWrap(true)
+                row.text = text
+
+                eventRowPool[rowCount] = row
+            end
+            row:ClearAllPoints()
+            row:SetPoint("TOPLEFT", detailContainer.eventsAnchor, "TOPLEFT", 0, -y)
+            row.text:SetText(event.text or "")
+            row:Show()
+
+            -- Hauteur de ligne dynamique si le texte tient sur plusieurs lignes
+            local lineHeight = row.text:GetStringHeight()
+            local rowHeight = math.max(ROW_HEIGHT, lineHeight + 6)
+            row:SetHeight(rowHeight)
+            y = y + rowHeight + 2
+        end
+
+        y = y + SECTION_GAP
+    end
+
+    return y
+end
+
 local function HideDetailRows()
-    for _, label in ipairs(phaseLabelPool) do label:Hide() end
+    for _, header in ipairs(phaseHeaderPool) do header:Hide() end
     for _, row in ipairs(eventRowPool) do row:Hide() end
 end
 
@@ -79,44 +156,16 @@ local function ShowTimelineDetail(tier, boss)
     detailContainer.titleText:SetText(timeline.name or boss)
     detailContainer.notesText:SetText(timeline.notes or "")
 
-    local anchor = detailContainer.notesText
-    local phaseIndex, rowIndex = 0, 0
+    local notesHeight = detailContainer.notesText:GetStringHeight()
+    detailContainer.eventsAnchor:ClearAllPoints()
+    detailContainer.eventsAnchor:SetPoint("TOPLEFT", detailContainer.notesText, "BOTTOMLEFT", 0, -math.max(notesHeight, 16) - 14)
 
-    for _, phase in ipairs(timeline.phases or {}) do
-        phaseIndex = phaseIndex + 1
-        local phaseLabel = phaseLabelPool[phaseIndex]
-        if not phaseLabel then
-            phaseLabel = detailContainer:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-            phaseLabel:SetTextColor(VRT.ACCENT[1], VRT.ACCENT[2], VRT.ACCENT[3])
-            phaseLabelPool[phaseIndex] = phaseLabel
-        end
-        phaseLabel:ClearAllPoints()
-        phaseLabel:SetPoint("TOPLEFT", anchor, "BOTTOMLEFT", 0, -14)
-        phaseLabel:SetText(phase.name or ("Phase " .. phaseIndex))
-        phaseLabel:Show()
-        anchor = phaseLabel
-
-        for _, event in ipairs(phase.events or {}) do
-            rowIndex = rowIndex + 1
-            local row = eventRowPool[rowIndex]
-            if not row then
-                row = detailContainer:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-                row:SetWidth(580)
-                row:SetJustifyH("LEFT")
-                eventRowPool[rowIndex] = row
-            end
-            row:ClearAllPoints()
-            row:SetPoint("TOPLEFT", anchor, "BOTTOMLEFT", 8, -6)
-            row:SetText("- " .. (event.text or ""))
-            row:Show()
-            anchor = row
-        end
-    end
+    LayoutDetail(timeline)
 end
 
 local function RefreshBossList()
     if not bossListContainer then return end
-    local index = 0
+    local y = 0
     for _, tier in ipairs(VRT.RAID_TIERS) do
         local tierLabel = tierLabels[tier]
         if not tierLabel then
@@ -124,19 +173,18 @@ local function RefreshBossList()
             tierLabel:SetTextColor(VRT.ACCENT[1], VRT.ACCENT[2], VRT.ACCENT[3])
             tierLabels[tier] = tierLabel
         end
-        index = index + 1
         tierLabel:ClearAllPoints()
-        tierLabel:SetPoint("TOPLEFT", bossListContainer, "TOPLEFT", 0, -(index - 1) * 22 - (index > 1 and 10 or 0))
+        tierLabel:SetPoint("TOPLEFT", bossListContainer, "TOPLEFT", 0, -y)
         tierLabel:SetText(VRT.RAID_TIER_LABELS[tier] or tier)
         tierLabel:Show()
+        y = y + 22
 
         for _, boss in ipairs(VRT.BOSS_LIST[tier] or {}) do
-            index = index + 1
             local key = tier .. "/" .. boss
             local btn = bossButtons[key]
             if not btn then
                 btn = CreateFrame("Button", nil, bossListContainer)
-                btn:SetSize(160, 20)
+                btn:SetSize(160, ROW_HEIGHT)
                 local text = btn:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
                 text:SetPoint("LEFT", btn, "LEFT", 8, 0)
                 btn.text = text
@@ -144,17 +192,18 @@ local function RefreshBossList()
                 bossButtons[key] = btn
             end
             btn:ClearAllPoints()
-            btn:SetPoint("TOPLEFT", bossListContainer, "TOPLEFT", 0, -(index - 1) * 22 - 10)
+            btn:SetPoint("TOPLEFT", bossListContainer, "TOPLEFT", 0, -y)
             local timeline = BossTimelines:GetTimeline(tier, boss)
             btn.text:SetText(timeline and timeline.name or boss)
             btn:Show()
+            y = y + ROW_HEIGHT
         end
+
+        y = y + SECTION_GAP
     end
 end
 
 function BossTimelines:BuildOptionsPanel(container)
-    optionsContainer = container
-
     bossListContainer = CreateFrame("Frame", nil, container)
     bossListContainer:SetPoint("TOPLEFT", container, "TOPLEFT", 0, 0)
     bossListContainer:SetSize(150, 400)
@@ -178,8 +227,14 @@ function BossTimelines:BuildOptionsPanel(container)
 
     detailContainer.notesText = detailContainer:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
     detailContainer.notesText:SetPoint("TOPLEFT", detailContainer.titleText, "BOTTOMLEFT", 0, -8)
-    detailContainer.notesText:SetWidth(580)
+    detailContainer.notesText:SetWidth(DETAIL_WIDTH)
     detailContainer.notesText:SetJustifyH("LEFT")
+    detailContainer.notesText:SetWordWrap(true)
+
+    -- Point d'ancrage neutre : sa position Y est recalculée à chaque sélection de boss
+    -- selon la hauteur réelle des notes (variable), puis LayoutDetail s'ancre à lui.
+    detailContainer.eventsAnchor = CreateFrame("Frame", nil, detailContainer)
+    detailContainer.eventsAnchor:SetSize(1, 1)
 
     RefreshBossList()
     -- Hauteur généreuse fixe : le plus long boss (Coiled Altar, 4 phases ~25 events)

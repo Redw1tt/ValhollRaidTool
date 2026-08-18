@@ -21,28 +21,14 @@ VRT.CLASS_INTERRUPTS = {
 }
 
 VRT.RAID_TIERS = {
-    "MidnightS1",
     "MidnightS2",
 }
 
 VRT.RAID_TIER_LABELS = {
-    MidnightS1 = "Midnight - Saison 1",
     MidnightS2 = "Midnight - Saison 2",
 }
 
 VRT.BOSS_LIST = {
-    MidnightS1 = {
-        "Beloren",
-        "Chimaerus",
-        "CrownOfTheCosmos",
-        "FallenKingSalhadaar",
-        "ImperatorAverzian",
-        "LightblindedVanguard",
-        "MidnightFalls",
-        "Rotmire",
-        "VaelgorEzzorak",
-        "Vorasius",
-    },
     MidnightS2 = {
         "EntombedSentinels",
         "NekzaliTheSoulcoiler",
