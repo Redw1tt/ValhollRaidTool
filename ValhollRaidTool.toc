@@ -1,9 +1,76 @@
 ## Interface: 120100
 ## Title: Valh|cFF25C7EBoll|r Raid Tool
-## Notes: Suivi des interruptions et outils de raid par Redw1tt (/vrt). Licence GPL-3.0.
+## Notes: Outils de raid par Redw1tt (/vrt). Licence GPL-3.0.
 ## Author: Redw1tt
 ## Version: 2.0.0
-## SavedVariables: ValhollDB
+## SavedVariables: ValhollRaidToolDB
 ## X-License: GPL-3.0
 
-ValhollRaidTool.lua
+# Core
+Core\Init.lua
+Core\Constants.lua
+
+# UI foundation
+UI\Components.lua
+UI\AnchorWindow.lua
+
+# Boss timeline / alert engines
+BossTimelines\Timeline.lua
+EncounterAlerts\Alerts.lua
+
+# Boss data - Midnight Saison 1
+BossTimelines\MidnightS1\Beloren.lua
+BossTimelines\MidnightS1\Chimaerus.lua
+BossTimelines\MidnightS1\CrownOfTheCosmos.lua
+BossTimelines\MidnightS1\FallenKingSalhadaar.lua
+BossTimelines\MidnightS1\ImperatorAverzian.lua
+BossTimelines\MidnightS1\LightblindedVanguard.lua
+BossTimelines\MidnightS1\MidnightFalls.lua
+BossTimelines\MidnightS1\Rotmire.lua
+BossTimelines\MidnightS1\VaelgorEzzorak.lua
+BossTimelines\MidnightS1\Vorasius.lua
+EncounterAlerts\MidnightS1\Beloren.lua
+EncounterAlerts\MidnightS1\Chimaerus.lua
+EncounterAlerts\MidnightS1\CrownOfTheCosmos.lua
+EncounterAlerts\MidnightS1\FallenKingSalhadaar.lua
+EncounterAlerts\MidnightS1\ImperatorAverzian.lua
+EncounterAlerts\MidnightS1\LightblindedVanguard.lua
+EncounterAlerts\MidnightS1\MidnightFalls.lua
+EncounterAlerts\MidnightS1\Rotmire.lua
+EncounterAlerts\MidnightS1\VaelgorEzzorak.lua
+EncounterAlerts\MidnightS1\Vorasius.lua
+
+# Boss data - Midnight Saison 2
+BossTimelines\MidnightS2\EntombedSentinels.lua
+BossTimelines\MidnightS2\NekzaliTheSoulcoiler.lua
+BossTimelines\MidnightS2\NymrissaWavecaller.lua
+BossTimelines\MidnightS2\Sszorak.lua
+BossTimelines\MidnightS2\TheCoiledAltar.lua
+BossTimelines\MidnightS2\TheLostExplorers.lua
+BossTimelines\MidnightS2\TheTwinFangs.lua
+BossTimelines\MidnightS2\Ulatek.lua
+BossTimelines\MidnightS2\VashnikTheMalignant.lua
+EncounterAlerts\MidnightS2\EntombedSentinels.lua
+EncounterAlerts\MidnightS2\NekzaliTheSoulcoiler.lua
+EncounterAlerts\MidnightS2\NymrissaWavecaller.lua
+EncounterAlerts\MidnightS2\Sszorak.lua
+EncounterAlerts\MidnightS2\TheCoiledAltar.lua
+EncounterAlerts\MidnightS2\TheLostExplorers.lua
+EncounterAlerts\MidnightS2\TheTwinFangs.lua
+EncounterAlerts\MidnightS2\Ulatek.lua
+EncounterAlerts\MidnightS2\VashnikTheMalignant.lua
+
+# Functional modules
+Modules\AuraTracking.lua
+Modules\AuraSounds.lua
+Modules\CooldownCheck.lua
+Modules\Reminders.lua
+Modules\Nicknames.lua
+Modules\ReadyCheck.lua
+Modules\Assignments.lua
+Modules\PaceComparison.lua
+Modules\WAImports.lua
+Modules\VersionCheck.lua
+
+# Options UI (last, depends on everything above)
+UI\Options.lua
