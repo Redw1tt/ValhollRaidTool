@@ -228,12 +228,16 @@ function EncounterAlerts:BuildOptionsPanel(container)
     end
 
     local totalHeight = LayoutAlertPanel()
+    -- listContainer n'a que TOPLEFT/TOPRIGHT ; sans hauteur explicite, sa position basse
+    -- n'est pas résolvable et ses enfants (pourtant "shown") ne se rendent jamais.
+    listContainer:SetHeight(math.max(totalHeight, 1))
     container.contentHeight = totalHeight + 20
 end
 
 function EncounterAlerts:RefreshOptionsPanel()
     if not listContainer then return end
     local totalHeight = LayoutAlertPanel()
+    listContainer:SetHeight(math.max(totalHeight, 1))
     local container = listContainer:GetParent()
     if container then container.contentHeight = totalHeight + 20 end
     local options = VRT:GetModule("Options")
