@@ -4,7 +4,7 @@ local UI = VRT.UI
 local Options = {}
 VRT:RegisterModule("Options", Options)
 
-local PANEL_WIDTH, PANEL_HEIGHT = 720, 480
+local PANEL_WIDTH, PANEL_HEIGHT = 960, 640
 local SIDEBAR_WIDTH = 140
 local TITLEBAR_HEIGHT = 28
 

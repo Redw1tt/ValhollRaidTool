@@ -101,7 +101,7 @@ local function ShowTimelineDetail(tier, boss)
             local row = eventRowPool[rowIndex]
             if not row then
                 row = detailContainer:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-                row:SetWidth(342)
+                row:SetWidth(580)
                 row:SetJustifyH("LEFT")
                 eventRowPool[rowIndex] = row
             end
@@ -178,13 +178,13 @@ function BossTimelines:BuildOptionsPanel(container)
 
     detailContainer.notesText = detailContainer:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
     detailContainer.notesText:SetPoint("TOPLEFT", detailContainer.titleText, "BOTTOMLEFT", 0, -8)
-    detailContainer.notesText:SetWidth(350)
+    detailContainer.notesText:SetWidth(580)
     detailContainer.notesText:SetJustifyH("LEFT")
 
     RefreshBossList()
     -- Hauteur généreuse fixe : le plus long boss (Coiled Altar, 4 phases ~25 events)
     -- tient dans cet espace ; le scroll du panneau principal gère le débordement éventuel.
-    container.contentHeight = 900
+    container.contentHeight = 700
 end
 
 function BossTimelines:RefreshOptionsPanel()
