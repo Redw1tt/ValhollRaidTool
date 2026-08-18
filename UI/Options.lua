@@ -272,11 +272,18 @@ function Options:SelectTab(key)
     end
 
     -- Chaque panneau déclare sa propre hauteur (container.contentHeight) ; le scroll
-    -- child adopte la plus grande valeur entre celle-ci et la zone visible.
+    -- child adopte la plus grande valeur entre celle-ci et la zone visible. Le container
+    -- lui-même a aussi besoin d'une hauteur explicite : sans point BOTTOM ni SetHeight,
+    -- sa position (GetTop/GetBottom) n'est pas résolvable, ce qui casse l'ancrage de
+    -- tous ses enfants (ils restent "shown" mais jamais réellement visibles à l'écran).
     local activeContainer = tabContainers[key]
     local minHeight = frame.scrollFrame:GetHeight()
     local wantedHeight = (activeContainer and activeContainer.contentHeight) or minHeight
-    frame.content:SetHeight(math.max(wantedHeight, minHeight))
+    local finalHeight = math.max(wantedHeight, minHeight)
+    frame.content:SetHeight(finalHeight)
+    if activeContainer then
+        activeContainer:SetHeight(activeContainer.contentHeight or finalHeight)
+    end
 end
 
 function Options:Toggle()
