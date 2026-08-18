@@ -57,13 +57,20 @@ end
 
 local function HandleCombatLogEvent()
     if not activeAlerts then return end
-    local _, subEvent, _, sourceGUID, _, _, _, _, _, _, _, spellID = CombatLogGetCurrentEventInfo()
+    local _, subEvent, _, sourceGUID, _, _, _, destGUID, _, _, _, spellID = CombatLogGetCurrentEventInfo()
+    local playerGUID = UnitGUID("player")
 
     for _, alert in ipairs(activeAlerts) do
         if alert.trigger == subEvent and alert.spellID == spellID then
-            ShowAlertText(alert.message, alert.color)
-            if alert.sound then
-                PlaySoundFile(alert.sound, "Master")
+            -- Pour les événements d'aura (ex: SPELL_AURA_APPLIED), ne s'affiche que si le
+            -- joueur local est la cible, sinon toute application sur un autre membre du
+            -- raid déclencherait l'alerte "sur toi".
+            local isAuraEvent = subEvent:match("^SPELL_AURA_") ~= nil
+            if not isAuraEvent or destGUID == playerGUID then
+                ShowAlertText(alert.message, alert.color)
+                if alert.sound then
+                    PlaySoundFile(alert.sound, "Master")
+                end
             end
         end
     end
