@@ -88,9 +88,33 @@ local function HideAllDetailRows()
     HideList(reminderRowPool)
 end
 
+-- Icônes de rôle natives (feuille de sprite Blizzard standard des rôles donjon/groupe) et
+-- détection depuis un préfixe "[Tank]"/"[Heal]"/"[DPS]" au début du texte d'une mécanique.
+local ROLE_ICON_TEXTURE = "Interface\\LFGFrame\\UI-LFG-ICON-PORTRAITROLES"
+local ROLE_ICON_COORDS = {
+    Tank = { 0, 0.296875, 0, 0.296875 },
+    Heal = { 0.296875, 0.59375, 0, 0.296875 },
+    DPS  = { 0.59375, 0.890625, 0, 0.296875 },
+}
+local ROLE_PATTERNS = {
+    { pattern = "^%[Tank[/%]]", role = "Tank" },
+    { pattern = "^%[Heal[/%]]", role = "Heal" },
+    { pattern = "^%[DPS[/%]]", role = "DPS" },
+}
+
+local function DetectRole(text)
+    for _, entry in ipairs(ROLE_PATTERNS) do
+        if text:match(entry.pattern) then
+            return entry.role
+        end
+    end
+    return nil
+end
+
 -- Ligne "puce + texte" générique, réutilisée pour Cooldowns et Reminders (simple liste
--- plate, contrairement aux Mécaniques qui ont des en-têtes de phase).
-local function AcquireBulletRow(pool, index, parent, accentColor)
+-- plate, contrairement aux Mécaniques qui ont des en-têtes de phase). `withRoleIcon`
+-- réserve une icône de rôle à gauche du texte (utilisé par les mécaniques uniquement).
+local function AcquireBulletRow(pool, index, parent, accentColor, withRoleIcon)
     local row = pool[index]
     if row then return row end
 
@@ -103,15 +127,41 @@ local function AcquireBulletRow(pool, index, parent, accentColor)
     bullet:SetColorTexture(accentColor[1], accentColor[2], accentColor[3], 0.9)
     row.bullet = bullet
 
+    local textLeftOffset = 16
+    if withRoleIcon then
+        local roleIcon = row:CreateTexture(nil, "OVERLAY")
+        roleIcon:SetSize(14, 14)
+        roleIcon:SetPoint("LEFT", row, "LEFT", 14, 0)
+        roleIcon:SetTexture(ROLE_ICON_TEXTURE)
+        roleIcon:Hide()
+        row.roleIcon = roleIcon
+        textLeftOffset = 32
+    end
+
     local text = row:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-    text:SetPoint("LEFT", row, "LEFT", 16, 0)
+    text:SetPoint("LEFT", row, "LEFT", textLeftOffset, 0)
     text:SetPoint("RIGHT", row, "RIGHT", 0, 0)
     text:SetJustifyH("LEFT")
     text:SetWordWrap(true)
     row.text = text
+    row.textLeftOffset = textLeftOffset
 
     pool[index] = row
     return row
+end
+
+-- Affiche/masque l'icône de rôle d'une ligne et ajuste la position du texte en
+-- conséquence. Le préfixe "[Tank]"/"[Heal]"/"[DPS]" reste dans le texte affiché.
+local function ApplyRowRole(row, rawText)
+    if not row.roleIcon then return end
+    local role = DetectRole(rawText)
+    local coords = role and ROLE_ICON_COORDS[role]
+    if coords then
+        row.roleIcon:SetTexCoord(coords[1], coords[2], coords[3], coords[4])
+        row.roleIcon:Show()
+    else
+        row.roleIcon:Hide()
+    end
 end
 
 -- Empile une liste plate d'entrées {text=...} sous `anchorFrame`, chacune dans son propre
@@ -165,10 +215,12 @@ local function LayoutMechanics(timeline, anchorFrame)
 
         for _, event in ipairs(phase.events or {}) do
             rowCount = rowCount + 1
-            local row = AcquireBulletRow(mechRowPool, rowCount, detailContainer, VRT.ACCENT)
+            local row = AcquireBulletRow(mechRowPool, rowCount, detailContainer, VRT.ACCENT, true)
             row:ClearAllPoints()
             row:SetPoint("TOPLEFT", anchorFrame, "TOPLEFT", 0, -y)
-            row.text:SetText(event.text or "")
+            local eventText = event.text or ""
+            row.text:SetText(eventText)
+            ApplyRowRole(row, eventText)
             row:Show()
 
             local lineHeight = row.text:GetStringHeight()
@@ -202,8 +254,12 @@ local function ShowTimelineDetail(tier, boss)
     detailContainer.titleText:SetText(timeline.name or boss)
     detailContainer.notesText:SetText(timeline.notes or "")
 
+    -- Empilement réel : titre -> (8px) -> notes -> (18px) -> premier bloc. Le calcul
+    -- précédent ignorait la hauteur du titre lui-même, ce qui faisait chevaucher les
+    -- notes et le bloc Mécaniques avec un titre de boss sur deux lignes ou long.
+    local titleHeight = detailContainer.titleText:GetStringHeight()
     local notesHeight = detailContainer.notesText:GetStringHeight()
-    local y = math.max(notesHeight, 16) + 18
+    local y = math.max(titleHeight, 20) + 8 + math.max(notesHeight, 16) + 18
 
     -- Bloc Mécaniques
     local mechPanel = detailContainer.mechPanel
